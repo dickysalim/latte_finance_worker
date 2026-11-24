@@ -16,6 +16,8 @@ export function makeHarness() {
     limitsOn: false,
     failEmail: false,
     clientIds: "test-client-id",
+    longHits: new Map<string, number>(),
+    deps_now: () => Math.floor(Date.now() / 1000) + h.offset,
   };
   const deps: Deps = {
     ...defaultDeps,
@@ -29,7 +31,14 @@ export function makeHarness() {
       if (!p) throw new ApiError(401, "google_token_invalid", "Google token is not valid");
       return p;
     },
-    rateLimit: async (key, max) => {
+    rateLimit: async (key, max, windowSeconds) => {
+      if (windowSeconds > 60) {
+        // Long windows (the hourly notice mail) always count, by the injected clock.
+        const at = h.longHits.get(key);
+        if (at !== undefined && h.deps_now() < at + windowSeconds) return false;
+        h.longHits.set(key, h.deps_now());
+        return true;
+      }
       if (!h.limitsOn) return true;
       const n = (h.counts.get(key) ?? 0) + 1;
       h.counts.set(key, n);

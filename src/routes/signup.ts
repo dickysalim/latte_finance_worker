@@ -38,7 +38,8 @@ signup.post("/normal-signup", async (c) => {
 
   const existing = await getUserByEmail(db, email!);
   if (existing && existing.email_verified_at !== null) {
-    await sendAlreadyRegisteredEmail(deps, email!);
+    // The notice goes at most once an hour per address (story 54); the reply stays the same either way.
+    if (await deps.rateLimit(`notice:${email}`, 1, 3600)) await sendAlreadyRegisteredEmail(deps, email!);
     return ok;
   }
 
