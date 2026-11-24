@@ -178,7 +178,7 @@ describe("/me", () => {
     const r = await api("/me", {}, { token: u.access });
     expect(r.status).toBe(200);
     expect(r.json).toEqual({
-      id: u.id, email: u.email, username: expect.any(String), name: "alice test", household_id: null, home_household_id: null,
+      id: u.id, email: u.email, username: expect.any(String), name: "alice test", household_id: null, home_household_id: null, household_owner_name: null,
       profile_needed: false, household_needed: true, can_leave: false, has_password: true, has_google: false,
     });
   });
@@ -197,6 +197,9 @@ describe("/me", () => {
     const moved = (await api("/accept-invite", { invite_id: inv.id }, { token: u.access })).json.access_token;
     const me = (await api("/me", null, { token: moved, raw: "" })).json;
     expect(me).toMatchObject({ household_id: o1.household, home_household_id: u.household, can_leave: true });
+    expect(me.household_owner_name).toBe("alice test");
+    await run("UPDATE tenant_user SET name = 'owner renamed' WHERE id = ?", o1.id);
+    expect((await api("/me", {}, { token: moved })).json.household_owner_name).toBe("owner renamed");
     await run("UPDATE tenant_household SET owner_id = ? WHERE id = ?", u.id, o1.household);
     expect((await api("/me", {}, { token: moved })).json.can_leave).toBe(false);
   });

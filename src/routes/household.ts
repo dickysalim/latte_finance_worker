@@ -179,10 +179,14 @@ household.post("/me", requireAuth, async (c) => {
     .bind(user.id)
     .all<{ provider: string }>()
     .then((r) => r.results.map((l) => l.provider));
-  const owner =
+  const ownerRow =
     user.household_id === null
       ? null
-      : (await db.prepare("SELECT owner_id FROM tenant_household WHERE id = ?").bind(user.household_id).first<{ owner_id: string | null }>())?.owner_id;
+      : await db
+          .prepare("SELECT h.owner_id, u.name AS owner_name FROM tenant_household h LEFT JOIN tenant_user u ON u.id = h.owner_id WHERE h.id = ?")
+          .bind(user.household_id)
+          .first<{ owner_id: string | null; owner_name: string | null }>();
+  const owner = ownerRow?.owner_id ?? null;
   return c.json({
     id: user.id,
     email: user.email,
@@ -190,6 +194,7 @@ household.post("/me", requireAuth, async (c) => {
     name: user.name,
     household_id: user.household_id,
     home_household_id: user.home_household_id,
+    household_owner_name: ownerRow?.owner_name ?? null,
     profile_needed: user.username === null,
     household_needed: user.household_id === null,
     can_leave: user.household_id !== null && user.household_id !== user.home_household_id && owner !== user.id,
