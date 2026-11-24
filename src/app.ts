@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import { ApiError } from "./lib/errors";
+import { defaultDeps, type Deps } from "./lib/deps";
+import { ApiError, notFound } from "./lib/errors";
 
-export function createApp() {
+export function createApp(_deps: Deps = defaultDeps) {
   const app = new Hono<{ Bindings: Cloudflare.Env }>();
 
   app.get("/health", async (c) => {
@@ -10,14 +11,12 @@ export function createApp() {
     return c.json({ status: "ok", service: "latte-finance-worker" });
   });
 
-  app.notFound((c) => c.json({ error: "not_found", message: "Not found" }, 404));
+  app.notFound((c) => c.json(notFound().toBody(), 404));
 
   app.onError((err, c) => {
-    if (err instanceof ApiError) {
-      return c.json({ error: err.code, message: err.message, ...(err.fields ? { fields: err.fields } : {}) }, err.status);
-    }
+    if (err instanceof ApiError) return c.json(err.toBody(), err.status);
     console.error(err);
-    return c.json({ error: "internal", message: "Something went wrong" }, 500);
+    return c.json({ error: { code: "internal", message: "Something went wrong" } }, 500);
   });
 
   return app;

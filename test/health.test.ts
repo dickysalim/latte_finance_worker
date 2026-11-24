@@ -12,6 +12,6 @@ describe("/health", () => {
   it("unknown route is a JSON 404", async () => {
     const res = await createApp().request("/nope", {}, env);
     expect(res.status).toBe(404);
-    expect(await res.json()).toMatchObject({ error: "not_found" });
+    expect(await res.json()).toMatchObject({ error: { code: "not_found", message: "Not found" } });
   });
 });
