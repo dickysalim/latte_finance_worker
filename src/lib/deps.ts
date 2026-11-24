@@ -58,9 +58,9 @@ async function sendEmail(msg: EmailMessage, env?: Cloudflare.Env): Promise<void>
   if (!res.ok) throw new Error(`Resend answered ${res.status}`);
 }
 
-/** Cloudflare rate limiting bindings: RL_5 (5 per 60 s) and RL_20 (20 per 60 s). No binding: allow. */
+/** Cloudflare rate limiting bindings: RL_1 (1 per 60 s), RL_5 (5 per 60 s) and RL_20 (20 per 60 s). No binding: allow. */
 async function rateLimit(key: string, max: number, _windowSeconds: number, env?: Cloudflare.Env): Promise<boolean> {
-  const binding = max === 5 ? env?.RL_5 : max === 20 ? env?.RL_20 : undefined;
+  const binding = max === 1 ? env?.RL_1 : max === 5 ? env?.RL_5 : max === 20 ? env?.RL_20 : undefined;
   if (!binding) return true;
   return (await binding.limit({ key })).success;
 }

@@ -30,13 +30,13 @@ describe("F1-1 sign-up replies", () => {
     expect(h.sent.at(-1)!.text).not.toMatch(/token=/);
   });
 
-  it("F1-1.09b notice mail at most once per hour per address (story 54, rev 1201)", async () => {
+  it("F1-1.09b notice mail at most once per 60 seconds per address (story 54, rev 1210)", async () => {
     const v = await newUser(email("n"), uname("notice"));
     h.sent.length = 0;
     await signup(v.email, uname("x1"));
     await signup(v.email, uname("x2"));
     expect(h.sent.filter((m) => m.to === v.email)).toHaveLength(1);
-    h.offset = 3601;
+    h.offset = 61;
     await signup(v.email, uname("x3"));
     h.offset = 0;
     expect(h.sent.filter((m) => m.to === v.email)).toHaveLength(2);

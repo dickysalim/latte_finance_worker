@@ -32,8 +32,8 @@ export function makeHarness() {
       return p;
     },
     rateLimit: async (key, max, windowSeconds) => {
-      if (windowSeconds > 60) {
-        // Long windows (the hourly notice mail) always count, by the injected clock.
+      if (max === 1) {
+        // The notice mail (limit 1 per 60 s) always count, by the injected clock.
         const at = h.longHits.get(key);
         if (at !== undefined && h.deps_now() < at + windowSeconds) return false;
         h.longHits.set(key, h.deps_now());

@@ -12,6 +12,7 @@ declare namespace Cloudflare {
     JWT_SECRET: string;
     RESEND_API_KEY?: string;
     /** Cloudflare rate limiting bindings (5 and 20 calls per 60 seconds). */
+    RL_1?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     RL_5?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     RL_20?: { limit(options: { key: string }): Promise<{ success: boolean }> };
     TEST_MIGRATIONS: import("@cloudflare/vitest-plugin").D1Migration[];
