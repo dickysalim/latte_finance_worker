@@ -1,0 +1,17 @@
+name = "latte-finance-worker"
+account_id = "c9cb13e9ce172aecf02828557cd72f20"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APP_URL = "http://localhost:5173"
+
+# `wrangler dev` and the tests use a local D1 copy. The remote database gets
+# the migrations only through `d1 migrations apply --remote`, run with the
+# scoped HOME described in CLAUDE.md. Never add `remote = true` here.
+[[d1_databases]]
+binding = "DB"
+database_name = "latte-finance-db"
+database_id = "ef71aaf7-4237-40ad-9158-7189639d38e0"
+migrations_dir = "migrations"
