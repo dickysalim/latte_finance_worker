@@ -8,6 +8,8 @@ compatibility_flags = ["nodejs_compat"]
 # Public Google OAuth client ids, comma separated. Empty until the Google client exists:
 # /google-signup and /google-login then answer 409 google_not_configured.
 GOOGLE_CLIENT_IDS = ""
+# "resend" in production. Local `wrangler dev` sets EMAIL_MODE=log in .dev.vars (nothing is sent).
+EMAIL_MODE = "resend"
 MAIL_FROM = "Latte Finance <onboarding@resend.dev>"
 # Production web build. Local `wrangler dev` overrides it in .dev.vars (git-ignored).
 APP_URL = "https://latte-finance-mobile.latte-factor.workers.dev"

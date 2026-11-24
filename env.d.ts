@@ -4,6 +4,8 @@ declare namespace Cloudflare {
     APP_URL: string;
     /** Comma separated Google OAuth client ids (public). Empty until the Google client exists. */
     GOOGLE_CLIENT_IDS: string;
+    /** "resend" sends through Resend (production). "log" sends nothing and logs the links (local, .dev.vars). */
+    EMAIL_MODE?: "resend" | "log";
     /** Sender shown on emails, for example "Latte Finance <noreply@example.com>". */
     MAIL_FROM: string;
     /** Wrangler secrets. Never in wrangler.toml or git. */

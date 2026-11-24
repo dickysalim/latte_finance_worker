@@ -66,3 +66,18 @@ describe("default deps", () => {
     expect(Math.abs(defaultDeps.now() - Date.now() / 1000)).toBeLessThan(2);
   });
 });
+
+describe("EMAIL_MODE=log", () => {
+  it("sends nothing and logs the links", async () => {
+    const { depsFor } = await import("../src/lib/deps");
+    const lines: string[] = [];
+    const orig = console.log;
+    console.log = (...a: unknown[]) => void lines.push(a.join(" "));
+    try {
+      await depsFor({ EMAIL_MODE: "log" } as Cloudflare.Env).sendEmail({ to: "a@example.com", subject: "S", text: "Open https://app.example.com/verify?token=abc now" });
+    } finally {
+      console.log = orig;
+    }
+    expect(lines.join("\n")).toContain('https://app.example.com/verify?token=abc');
+  });
+});

@@ -40,6 +40,12 @@ async function verifyGoogleToken(idToken: string, audiences: string[]): Promise<
 
 /** Never log the body: it holds a link token. */
 async function sendEmail(msg: EmailMessage, env?: Cloudflare.Env): Promise<void> {
+  if (env?.EMAIL_MODE === "log") {
+    // Local stub (.dev.vars only): sends nothing, prints the links so a tester can open them.
+    const links = msg.text.match(/https?:\/\/\S+/g) ?? [];
+    console.log(`[mail:log] to=${msg.to} subject="${msg.subject}" links=${JSON.stringify(links)}`);
+    return;
+  }
   if (!env?.RESEND_API_KEY) {
     console.log(`[mail] RESEND_API_KEY not set, not sending "${msg.subject}" to ${msg.to}`);
     return;
