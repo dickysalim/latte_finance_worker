@@ -171,3 +171,36 @@ describe("/invites and /accept-invite", () => {
     expect([r.status, r.json.error.code, r.json.error.message]).toEqual([409, "already_in_household", "You are already in this household"]);
   });
 });
+
+describe("/me", () => {
+  it("a new user: flags say profile done, household needed; password only", async () => {
+    const u = await newUser(email("me"), uname("me"));
+    const r = await api("/me", {}, { token: u.access });
+    expect(r.status).toBe(200);
+    expect(r.json).toEqual({
+      id: u.id, email: u.email, username: expect.any(String), name: "alice test", household_id: null, home_household_id: null,
+      profile_needed: false, household_needed: true, can_leave: false, has_password: true, has_google: false,
+    });
+  });
+  it("a Google user without a profile: profile_needed, has_google only", async () => {
+    const e = email("gme");
+    h.google.set("gme", { sub: `sub-${e}`, email: e, emailVerified: true, name: "G" });
+    await api("/google-signup", { id_token: "gme" });
+    const token = (await api("/google-login", { id_token: "gme" })).json.access_token;
+    expect((await api("/me", {}, { token })).json).toMatchObject({ username: null, profile_needed: true, has_password: false, has_google: true });
+  });
+  it("can_leave: false at home, true in another household as member, false there as owner; no body needed", async () => {
+    const o1 = await newHouseholdUser(email("o1"), uname("own1"));
+    const u = await newHouseholdUser(email("u"), uname("leaver"));
+    expect((await api("/me", {}, { token: u.access })).json).toMatchObject({ household_id: u.household, household_needed: false, can_leave: false });
+    const inv = await seedInvite(o1.household, o1.id, u.email);
+    const moved = (await api("/accept-invite", { invite_id: inv.id }, { token: u.access })).json.access_token;
+    const me = (await api("/me", null, { token: moved, raw: "" })).json;
+    expect(me).toMatchObject({ household_id: o1.household, home_household_id: u.household, can_leave: true });
+    await run("UPDATE tenant_household SET owner_id = ? WHERE id = ?", u.id, o1.household);
+    expect((await api("/me", {}, { token: moved })).json.can_leave).toBe(false);
+  });
+  it("needs a token", async () => {
+    expect((await api("/me")).json.error.code).toBe("token_invalid");
+  });
+});

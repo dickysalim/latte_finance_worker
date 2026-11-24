@@ -164,22 +164,34 @@ session.post("/refresh", async (c) => {
   const user = (await getUserById(db, row.user_id))!;
   if (user.is_active === 0) {
     await endSession(row.id);
-    throw new ApiError(401, "account_deactivated", "This account is deactivated");
+    throw deactivated();
   }
 
   const newRefresh = deps.randomToken();
   const newHash = await hashToken(newRefresh);
-  /** Token renewed once already: renew again only inside the 60 second grace, keeping the grace start. */
-  const graceRenewal = async (s: SessionRow) => {
-    if (now - s.last_used_at > 60) {
-      await endSession(s.id);
-      throw sessionEnded();
+  /**
+   * Token renewed once already (grace): inside 60 seconds renew again, with previous = the hash being replaced
+   * and last_used_at untouched, so the grace never stretches. At 60 seconds or more the session ends.
+   * If a parallel request wins the swap, read the session again and renew once more.
+   */
+  const graceRenewal = async (start: SessionRow) => {
+    let s: SessionRow | null = start;
+    for (let attempt = 0; attempt < 2 && s; attempt++) {
+      if (s.ended_at !== null) throw sessionEnded();
+      if (now - s.last_used_at >= 60) {
+        await endSession(s.id);
+        throw sessionEnded();
+      }
+      const r = await db
+        .prepare(
+          "UPDATE tenant_user_session SET previous_refresh_token_hash = refresh_token_hash, refresh_token_hash = ? WHERE id = ? AND refresh_token_hash = ? AND ended_at IS NULL",
+        )
+        .bind(newHash, s.id, s.refresh_token_hash)
+        .run();
+      if (r.meta.changes === 1) return;
+      s = await db.prepare("SELECT * FROM tenant_user_session WHERE id = ?").bind(s.id).first<SessionRow>();
     }
-    const r = await db
-      .prepare("UPDATE tenant_user_session SET refresh_token_hash = ? WHERE id = ? AND previous_refresh_token_hash = ? AND ended_at IS NULL")
-      .bind(newHash, s.id, presented)
-      .run();
-    if (r.meta.changes !== 1) throw sessionEnded();
+    throw sessionEnded();
   };
 
   if (previous) {

@@ -168,3 +168,32 @@ household.post("/accept-invite", requireAuth, async (c) => {
   }
   return c.json({ access_token: await issueAccessToken(c, { uid, hid: invite.household_id, sid }), household_id: invite.household_id });
 });
+
+// ------------------------------------------------------------------ /me
+household.post("/me", requireAuth, async (c) => {
+  await readBody(c, true);
+  const db = c.env.DB;
+  const user = (await getUserById(db, c.get("auth").uid))!;
+  const logins = await db
+    .prepare("SELECT provider FROM tenant_user_login WHERE user_id = ?")
+    .bind(user.id)
+    .all<{ provider: string }>()
+    .then((r) => r.results.map((l) => l.provider));
+  const owner =
+    user.household_id === null
+      ? null
+      : (await db.prepare("SELECT owner_id FROM tenant_household WHERE id = ?").bind(user.household_id).first<{ owner_id: string | null }>())?.owner_id;
+  return c.json({
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    name: user.name,
+    household_id: user.household_id,
+    home_household_id: user.home_household_id,
+    profile_needed: user.username === null,
+    household_needed: user.household_id === null,
+    can_leave: user.household_id !== null && user.household_id !== user.home_household_id && owner !== user.id,
+    has_password: logins.includes("password"),
+    has_google: logins.includes("google"),
+  });
+});

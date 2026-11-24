@@ -93,22 +93,42 @@ describe("/refresh, /logout, /logout-all", () => {
     expect(s.previous_refresh_token_hash).toBe(await hashToken(u.refresh));
     expect(s.refresh_token_hash).toBe(await hashToken(r.json.refresh_token));
   });
-  it("an old token inside 60 seconds renews again; after 60 seconds it ends that session only", async () => {
+  it("an old token inside 60 seconds renews again: previous = the replaced hash, last_used_at kept; at 60 seconds the session ends, other sessions stay", async () => {
     const u = await newUser(email("g"), uname("grace"));
     const second = await api("/login", { identifier: u.email, password: u.password });
-    const first = await api("/refresh", { refresh_token: u.refresh });
-    const again = await api("/refresh", { refresh_token: u.refresh });
-    expect(again.status).toBe(200);
-    expect(again.json.refresh_token).not.toBe(first.json.refresh_token);
-    // The grace start does not move.
-    const s = await row("SELECT * FROM tenant_user_session WHERE refresh_token_hash = ?", await hashToken(again.json.refresh_token));
-    expect(s.previous_refresh_token_hash).toBe(await hashToken(u.refresh));
-    await run("UPDATE tenant_user_session SET last_used_at = last_used_at - 120 WHERE id = ?", s.id);
-    const late = await api("/refresh", { refresh_token: u.refresh });
+    const t2 = (await api("/refresh", { refresh_token: u.refresh })).json.refresh_token; // T1 -> T2
+    const before = await row("SELECT * FROM tenant_user_session WHERE refresh_token_hash = ?", await hashToken(t2));
+    const t3 = await api("/refresh", { refresh_token: u.refresh }); // T1 again -> T3
+    expect(t3.status).toBe(200);
+    const s = await row("SELECT * FROM tenant_user_session WHERE id = ?", before.id);
+    expect(s.refresh_token_hash).toBe(await hashToken(t3.json.refresh_token));
+    expect(s.previous_refresh_token_hash).toBe(await hashToken(t2));
+    expect(s.last_used_at).toBe(before.last_used_at); // the grace start does not move
+    // T2 is now the previous token: it renews too (the app may have kept either reply).
+    const t4 = await api("/refresh", { refresh_token: t2 });
+    expect(t4.status).toBe(200);
+    // T1 is two renewals old and unknown now.
+    expect((await api("/refresh", { refresh_token: u.refresh })).json.error.code).toBe("session_ended");
+    // Exactly 60 seconds after the first renewal the grace is over.
+    await run("UPDATE tenant_user_session SET last_used_at = ? WHERE id = ?", deps.now() - 60, s.id);
+    const late = await api("/refresh", { refresh_token: t3.json.refresh_token });
     expect([late.status, late.json.error.code]).toEqual([401, "session_ended"]);
     expect((await row("SELECT ended_at e FROM tenant_user_session WHERE id = ?", s.id))!.e).toBeGreaterThan(0);
-    // The other device keeps working.
     expect((await api("/refresh", { refresh_token: second.json.refresh_token })).status).toBe(200);
+  });
+  it("59 seconds after the renewal the grace still works", async () => {
+    const u = await newUser(email("g59"), uname("grace59"));
+    await api("/refresh", { refresh_token: u.refresh });
+    await run("UPDATE tenant_user_session SET last_used_at = ? WHERE user_id = ?", deps.now() - 59, u.id);
+    expect((await api("/refresh", { refresh_token: u.refresh })).status).toBe(200);
+  });
+  it("two parallel requests with the same old token both get a working reply", async () => {
+    const u = await newUser(email("par"), uname("parallel"));
+    await api("/refresh", { refresh_token: u.refresh });
+    const [a, b] = await Promise.all([api("/refresh", { refresh_token: u.refresh }), api("/refresh", { refresh_token: u.refresh })]);
+    expect([a.status, b.status]).toEqual([200, 200]);
+    // Whichever token the app keeps, it still renews inside the grace.
+    expect((await api("/refresh", { refresh_token: a.json.refresh_token })).status).toBe(200);
   });
   it("unknown token, ended session, 30 days idle, deactivated user", async () => {
     expect((await api("/refresh", { refresh_token: "unknown" })).json.error.code).toBe("session_ended");
@@ -120,7 +140,7 @@ describe("/refresh, /logout, /logout-all", () => {
     const d = await newUser(email("y"), uname("deact"));
     await run("UPDATE tenant_user SET is_active = 0 WHERE id = ?", d.id);
     const dr = await api("/refresh", { refresh_token: d.refresh });
-    expect([dr.status, dr.json.error.code]).toEqual([401, "account_deactivated"]);
+    expect([dr.status, dr.json.error.code]).toEqual([403, "account_deactivated"]);
     expect((await api("/refresh", { refresh_token: d.refresh })).json.error.code).toBe("session_ended");
   });
   it("logout ends the session, the refresh token stops working, other sessions stay", async () => {
