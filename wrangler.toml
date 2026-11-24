@@ -5,7 +5,8 @@ compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-APP_URL = "http://localhost:5173"
+# Production web build. Local `wrangler dev` overrides it in .dev.vars (git-ignored).
+APP_URL = "https://latte-finance-mobile.latte-factor.workers.dev"
 
 # `wrangler dev` and the tests use a local D1 copy. The remote database gets
 # the migrations only through `d1 migrations apply --remote`, run with the
