@@ -8,7 +8,7 @@ import { household } from "./routes/household";
 import { ApiError, notFound } from "./lib/errors";
 
 export const ALLOWED_ORIGINS = [
-  "https://lattefinance.app",
+  "https://mobile.lattefinance.app",
   "https://latte-finance-mobile.latte-factor.workers.dev",
   "http://localhost:8081", // Expo web
   "http://localhost:5173",

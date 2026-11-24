@@ -14,7 +14,7 @@ GOOGLE_CLIENT_IDS = ""
 EMAIL_MODE = "resend"
 MAIL_FROM = "Latte Finance <hello@lattefinance.app>"
 # Production web build. Local `wrangler dev` overrides it in .dev.vars (git-ignored).
-APP_URL = "https://lattefinance.app"
+APP_URL = "https://mobile.lattefinance.app"
 
 # `wrangler dev` and the tests use a local D1 copy. The remote database gets
 # the migrations only through `d1 migrations apply --remote`, run with the

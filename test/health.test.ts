@@ -17,7 +17,7 @@ describe("/health", () => {
 });
 
 describe("CORS", () => {
-  const prod = "https://latte-finance-mobile.latte-factor.workers.dev";
+  const prod = "https://mobile.lattefinance.app";
   it("preflight from the web build is allowed", async () => {
     const res = await createApp().request(
       "/health",
