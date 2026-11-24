@@ -40,6 +40,17 @@ describe("mapDbError: a DB rule error is never a 500", () => {
     const e = await mapped(run("UPDATE tenant_user_password_reset SET used_at = 999999 WHERE token_hash = 'old'"));
     expect([e.status, e.code]).toEqual([409, "link_expired"]);
   });
+  it("expired invite trigger to 409 invite_expired", async () => {
+    const a = await seedHousehold();
+    await run("INSERT INTO tenant_user_invite (household_id, invited_by, email, token_hash, created_at) VALUES (?, ?, 'x@example.com', 'h', 1000)", a.hh, a.owner);
+    const e = await mapped(run("UPDATE tenant_user_invite SET status = 'accepted' WHERE token_hash = 'h'"));
+    expect([e.status, e.code]).toEqual([409, "invite_expired"]);
+  });
+  it("details appear in the body when set", () => {
+    expect(conflict("invites_waiting", "You have waiting invites", { invites: [] }).toBody()).toEqual({
+      error: { code: "invites_waiting", message: "You have waiting invites", details: { invites: [] } },
+    });
+  });
   it("non-constraint errors are rethrown", () => {
     expect(() => mapDbError(new Error("network down"))).toThrow("network down");
   });
