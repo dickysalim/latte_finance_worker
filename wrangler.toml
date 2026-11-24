@@ -5,6 +5,10 @@ compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
+# Public Google OAuth client ids, comma separated. Empty until the Google client exists:
+# /google-signup and /google-login then answer 409 google_not_configured.
+GOOGLE_CLIENT_IDS = ""
+MAIL_FROM = "Latte Finance <onboarding@resend.dev>"
 # Production web build. Local `wrangler dev` overrides it in .dev.vars (git-ignored).
 APP_URL = "https://latte-finance-mobile.latte-factor.workers.dev"
 
@@ -16,3 +20,14 @@ binding = "DB"
 database_name = "latte-finance-db"
 database_id = "ef71aaf7-4237-40ad-9158-7189639d38e0"
 migrations_dir = "migrations"
+
+# Rate limits (Cloudflare rate limiting). Keys are built in the routes.
+[[ratelimits]]
+name = "RL_5"
+namespace_id = "1005"
+simple = { limit = 5, period = 60 }
+
+[[ratelimits]]
+name = "RL_20"
+namespace_id = "1020"
+simple = { limit = 20, period = 60 }

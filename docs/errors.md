@@ -70,3 +70,15 @@ Rules:
 
 Outside Flow 1 (for the sheet later): /invite-create 429 `invite_limit`, /change-email-request 429 `too_soon`, "Current password is wrong" 403 `wrong_password`, "No password is set" 409 `no_password`.
 
+
+## Codes added while building Flow 1
+
+| Route | Status | Code | When |
+|---|---|---|---|
+| /google-signup, /google-login | 409 | `google_not_configured` | `GOOGLE_CLIENT_IDS` is empty (no Google client yet). Not in the sheet yet. |
+| /refresh | 401 | `session_ended` | unknown token, ended session, or a reused old token after the 60 second grace |
+| /refresh | 401 | `session_expired` | idle for more than 30 days |
+| /refresh | 401 | `account_deactivated` | the user is deactivated; the session is ended |
+| /complete-profile | 409 | `profile_completed` | the user already has a username |
+
+Replies (snake_case): /login and /google-login send `access_token`, `refresh_token`, `household_needed`, `profile_needed`. /refresh sends `access_token`, `refresh_token`. /first-login-household and /accept-invite send `access_token`, `household_id`. /invites sends `invites` (`invite_id`, `household_id`, `invited_by_name`, `created_at`). /normal-signup is 202 `{message}`. /email-verification sends `{verified: true}`. /complete-profile sends `{profile_needed: false}`. /logout and /logout-all send `{}`.

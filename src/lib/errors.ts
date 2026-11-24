@@ -25,7 +25,7 @@ export const conflict = (code: string, message: string, details?: Record<string,
   new ApiError(409, code, message, undefined, details);
 export const tooLarge = () => new ApiError(413, "payload_too_large", "Request body is too large");
 export const invalid = (fields: Record<string, string>) => new ApiError(422, "validation_failed", "Some fields are invalid", fields);
-export const rateLimited = () => new ApiError(429, "rate_limited", "Too many requests, try again in a minute");
+export const rateLimited = () => new ApiError(429, "rate_limited", "Too many attempts, please wait a minute");
 
 /**
  * Turn a D1 constraint error (UNIQUE, CHECK, FK, trigger) into an ApiError.
@@ -38,6 +38,7 @@ export function mapDbError(err: unknown): never {
   if (msg.includes("UNIQUE constraint failed")) {
     if (msg.includes("tenant_user.email")) throw conflict("email_taken", "Email is already registered");
     if (msg.includes("tenant_user.username")) throw conflict("username_taken", "Username is already taken");
+    if (msg.includes("tenant_user_login.provider")) throw conflict("google_taken", "This Google account is already registered");
     throw conflict("conflict", "This value already exists");
   }
   if (msg.includes("invite expired")) throw conflict("invite_expired", "This invite has expired");

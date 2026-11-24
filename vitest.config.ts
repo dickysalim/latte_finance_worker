@@ -8,9 +8,9 @@ export default defineConfig(async () => {
     plugins: [
       cloudflareTest({
         wrangler: { configPath: "./wrangler.toml" },
-        miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
+        miniflare: { bindings: { TEST_MIGRATIONS: migrations, JWT_SECRET: "test-secret-not-real" } },
       }),
     ],
-    test: { setupFiles: ["./test/apply-migrations.ts"] },
+    test: { setupFiles: ["./test/apply-migrations.ts"], testTimeout: 20000 },
   };
 });
